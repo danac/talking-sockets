@@ -1,14 +1,14 @@
 
-websocket_chat
+talking_sockets
 =================================================
 
 .. toctree::
     :maxdepth: 10
 
-    websocket_chat.signaler
+    talking_sockets.signaler
 
 
-.. automodule:: websocket_chat
+.. automodule:: talking_sockets
     :members:
     :undoc-members:
     :show-inheritance:

@@ -1,5 +1,5 @@
 
-websocket_chat.signaler
+talking_sockets.signaler
 =================================================
 
 .. toctree::
@@ -8,7 +8,7 @@ websocket_chat.signaler
     
 
 
-.. automodule:: websocket_chat.signaler
+.. automodule:: talking_sockets.signaler
     :members:
     :undoc-members:
     :show-inheritance:
