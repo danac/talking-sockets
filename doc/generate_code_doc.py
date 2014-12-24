@@ -23,7 +23,7 @@
 import os
 import pprint
 
-SOURCE_ROOT = os.path.join(os.path.dirname(__file__), '..', 'websocket_chat')
+SOURCE_ROOT = os.path.join(os.path.dirname(__file__), '..', 'talking_sockets')
 DOC_ROOT = os.path.join(os.path.dirname(__file__), 'code_doc')
 #DOC_ROOT = os.path.join('/tmp', 'backend')
 
