@@ -4,15 +4,14 @@ import concurrent.futures
 
 class ClientManager:
     """
-    Interface allowing a child class to register itself in a static register,
-    which can then be used to loop over all registered instances.
+    Implement a static interface to a register of references to objects.
     """
 
-    #: Class-wide dictionary containing the registered instances, indexed by ``id()``.
+    #: Class-wide dictionary containing the registered objects, indexed by ``id()``.
     clients = dict()
 
     @classmethod
-    def send_to_clients(cls, message):
+    def send_to_all(cls, message):
         """
         Calls the ``send_message`` method on all registered clients,
         passing them the message.
@@ -22,22 +21,28 @@ class ClientManager:
         for client in cls.clients.values():
             client.send_message(message)
 
-    def _register_connection(self):
+    @classmethod
+    def register(cls, instance):
         """
-        Registers the instance in the class-wide register.
-        """
-        key = id(self)
-        ClientManager.clients[key] = self
+        Registers an object in the class-wide register.
 
-    def _unregister_connection(self):
+        :param instance: Any object
         """
-        Removes the instance from the class-wide register.
+        key = id(instance)
+        cls.clients[key] = instance
+
+    @classmethod
+    def unregister(cls, instance):
         """
-        key = id(self)
-        ClientManager.clients.pop(key)
+        Removes an object from the class-wide register.
+
+        :param instance: Any object
+        """
+        key = id(instance)
+        cls.clients.pop(key)
 
 
-class TCPBroadcastServerFactory(asyncio.Protocol, ClientManager):
+class TCPBroadcastServerFactory(asyncio.Protocol):
     """
     Async TCP server factory that automatically (un-)registers client connections.
     """
@@ -53,14 +58,14 @@ class TCPBroadcastServerFactory(asyncio.Protocol, ClientManager):
         self.transport = transport
         self.peer_name = transport.get_extra_info("peername")
         print("connection_made: {}".format(self.peer_name))
-        self._register_connection()
+        ClientManager.register(self)
 
     def connection_lost(self, exc):
         """
         End of connection callback.
         """
         print("connection_lost: {}".format(self.peer_name))
-        self._unregister_connection()
+        ClientManager.unregister(self)
 
     def send_message(self, message):
         """
@@ -82,19 +87,11 @@ class Signaler:
         self.loop = asyncio.get_event_loop()
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         self.value = b"tick\n"
-        self.port = port
-        self.server_factory = server_factory
 
-        self.loop.run_until_complete(self._initialize_server())
-
-    @asyncio.coroutine
-    def _initialize_server(self):
-        """
-        Co-routine used to create the server.
-        """
-        yield from self.loop.create_server(self.server_factory, port=self.port)
-
-        print("serving on port {}".format(self.port))
+        # Create the server
+        create_server_coro = self.loop.create_server(server_factory, port=port)
+        self.loop.run_until_complete(create_server_coro)
+        print("serving on port {}".format(port))
 
     @asyncio.coroutine
     def _serve(self):
@@ -106,7 +103,7 @@ class Signaler:
             if input_value == '0':
                 break
 
-            self.server_factory.send_to_clients(self.value)
+            ClientManager.send_to_all(self.value)
 
     def run(self):
         """
