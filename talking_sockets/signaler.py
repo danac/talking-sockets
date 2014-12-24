@@ -1,5 +1,24 @@
 import asyncio
 import concurrent.futures
+from autobahn.asyncio.websocket import WebSocketServerProtocol, \
+                                       WebSocketServerFactory
+
+
+class WSBroadcastServerProtocol(WebSocketServerProtocol):
+
+    def onConnect(self, request):
+        print("Client connecting: {0}".format(request.peer))
+
+    def onOpen(self):
+        print("WebSocket connection open.")
+        ClientManager.register(self)
+
+    def onClose(self, was_clean, code, reason):
+        print("WebSocket connection closed: {}".format(reason))
+        ClientManager.unregister(self)
+
+    def send_message(self, message):
+        self.sendMessage(message)
 
 
 class ClientManager:
@@ -76,11 +95,11 @@ class TCPBroadcastServerFactory(asyncio.Protocol):
         self.transport.write(message)
 
 
+
 class Signaler:
     """
-    Connect a user input prompt to a server, broadcasting a message to the client whenever
-    the user hits return. To prevent blocking the event loop, the user prompt runs in a separate
-    thread.
+    Connect a user input prompt to a server, broadcasting a message to the connected
+    clients whenever the user hits return.
     """
 
     def __init__(self, server_factory=TCPBroadcastServerFactory, port=1234):
@@ -121,4 +140,9 @@ class Signaler:
 
 
 if __name__ == '__main__':
-    Signaler().run()
+    port = 1234
+
+    factory = WebSocketServerFactory("ws://localhost:{}".format(port), debug=False)
+    factory.protocol = WSBroadcastServerProtocol
+
+    Signaler(server_factory=factory).run()
