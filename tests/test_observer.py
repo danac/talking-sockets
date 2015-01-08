@@ -20,6 +20,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import os
 import nose.tools as nt
 from talking_sockets.observer import Observable, Observer, LoggingObserver
 
@@ -43,16 +44,12 @@ class TestObservable:
 
     def test_add_observer(self):
         self.observable.add_observer(self.observer)
-        self.observable.notify("")
-
-        nt.assert_equal(self.observer.updated, 1)
+        assert self.observer in self.observable.observers
 
     def test_remove_observer(self):
         self.observable.add_observer(self.observer)
         self.observable.remove_observer(self.observer)
-        self.observable.notify("")
-
-        nt.assert_equal(self.observer.updated, 0)
+        assert self.observer not in self.observable.observers
 
     @nt.raises(AssertionError)
     def test_add_invalid_observer(self):
@@ -67,11 +64,11 @@ class TestObservable:
     def test_remove_missing_observer(self):
         self.observable.remove_observer(self.observer)
 
-    def test_notify_emitter(self):
-        pass
-
-    def test_notify_message(self):
-        pass
+    def test_notify(self):
+        self.observable.add_observer(self.observer)
+        message = os.urandom(10)
+        self.observable.notify(message)
+        nt.assert_equal(self.observer.messages[0], (self.observable, message))
 
 
 class TestObserver:
@@ -83,3 +80,19 @@ class TestObserver:
             pass
 
         InvalidObserver()
+
+
+class TestLoggingObserver:
+
+    def test_udpate(self):
+        logging_observer = LoggingObserver()
+        nt.assert_equal(logging_observer.updated, 0)
+        nt.assert_equal(len(logging_observer.messages), 0)
+
+        emitter = object()
+        message = os.urandom(10)
+        logging_observer.update(emitter, message)
+
+        nt.assert_equal(logging_observer.updated, 1)
+        nt.assert_equal(len(logging_observer.messages), 1)
+        nt.assert_equal(logging_observer.messages[0], (emitter, message))
