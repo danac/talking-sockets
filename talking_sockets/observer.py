@@ -29,6 +29,18 @@ class Observer(metaclass=abc.ABCMeta):
         pass
 
 
+class LoggingObserver(Observer):
+
+    def __init__(self):
+        super().__init__()
+        self.messages = list()
+        self.updated = 0
+
+    def update(self, emitter, message):
+        self.updated += 1
+        self.messages.append((emitter, message))
+
+
 class Observable:
 
     def __init__(self):
@@ -40,7 +52,7 @@ class Observable:
 
     def remove_observer(self, observer):
         assert issubclass(observer.__class__, Observer),\
-            "Observer doesn't implement the right interface."
+            "Observer object doesn't implement the right interface."
         try:
             self.observers.remove(observer)
         except ValueError:
