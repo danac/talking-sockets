@@ -21,20 +21,7 @@
 #
 
 import nose.tools as nt
-from talking_sockets.observer import Observable, Observer
-
-
-class DummyObserver(Observer):
-
-    def __init__(self):
-        self.emitter = None
-        self.message = None
-        self.updated = False
-
-    def update(self, emitter, message):
-        self.updated = True
-        self.emitter = emitter
-        self.message = message
+from talking_sockets.observer import Observable, Observer, LoggingObserver
 
 
 class TestObservable:
@@ -49,7 +36,7 @@ class TestObservable:
 
     def setUp(self):
         self.observable = Observable()
-        self.observer = DummyObserver()
+        self.observer = LoggingObserver()
 
     def tearDown(self):
         pass
@@ -58,14 +45,14 @@ class TestObservable:
         self.observable.add_observer(self.observer)
         self.observable.notify("")
 
-        assert self.observer.updated is True
+        nt.assert_equal(self.observer.updated, 1)
 
     def test_remove_observer(self):
         self.observable.add_observer(self.observer)
         self.observable.remove_observer(self.observer)
         self.observable.notify("")
 
-        assert self.observer.updated is False
+        nt.assert_equal(self.observer.updated, 0)
 
     @nt.raises(AssertionError)
     def test_add_invalid_observer(self):
@@ -85,3 +72,14 @@ class TestObservable:
 
     def test_notify_message(self):
         pass
+
+
+class TestObserver:
+
+    @nt.raises(TypeError)
+    def test_abstract_update(self):
+
+        class InvalidObserver(Observer):
+            pass
+
+        InvalidObserver()
