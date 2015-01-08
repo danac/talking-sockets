@@ -1,4 +1,5 @@
 autobahn
 coverage
 nose
+nose-cov
 python-coveralls
