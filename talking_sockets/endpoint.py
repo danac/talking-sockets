@@ -19,7 +19,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-from talking_sockets.observer import Observable
+from talking_sockets.observer import Observable, Observer
 from talking_sockets.utils import assert_bytes
 
 
@@ -55,3 +55,7 @@ class SourceEndpoint(Observable):
             chunks.pop()
             for chunk in chunks:
                 self.notify(chunk)
+
+
+class SinkEndpoint(Observer):
+    pass
