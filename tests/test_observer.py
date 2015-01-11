@@ -20,9 +20,15 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import os
 import nose.tools as nt
-from talking_sockets.observer import Observable, Observer, LoggingObserver
+from unittest import mock
+from talking_sockets.observer import Observable, Observer
+
+
+class DummyObserver(Observer):
+
+    def update(self, emitter, message):
+        pass
 
 
 class TestObservable:
@@ -37,7 +43,7 @@ class TestObservable:
 
     def setUp(self):
         self.observable = Observable()
-        self.observer = LoggingObserver()
+        self.observer = DummyObserver()
 
     def tearDown(self):
         pass
@@ -47,7 +53,7 @@ class TestObservable:
         assert self.observer in self.observable.observers
 
     def test_remove_observer(self):
-        self.observable.add_observer(self.observer)
+        self.observable.observers.append(self.observer)
         self.observable.remove_observer(self.observer)
         assert self.observer not in self.observable.observers
 
@@ -57,7 +63,6 @@ class TestObservable:
             pass
 
         fake_observer = FakeObserver()
-
         self.observable.add_observer(fake_observer)
 
     @nt.raises(AssertionError)
@@ -65,10 +70,12 @@ class TestObservable:
         self.observable.remove_observer(self.observer)
 
     def test_notify(self):
-        self.observable.add_observer(self.observer)
-        message = os.urandom(10)
-        self.observable.notify(message)
-        nt.assert_equal(self.observer.messages[0], (self.observable, message))
+        self.observable.observers.append(self.observer)
+        with mock.patch.object(DummyObserver, 'update') as patched_update:
+            message = mock.sentinel.message
+            self.observable.notify(message)
+            patched_update.assert_called_once_with(self.observable, message)
+
 
 
 class TestObserver:
@@ -81,18 +88,3 @@ class TestObserver:
 
         InvalidObserver()
 
-
-class TestLoggingObserver:
-
-    def test_udpate(self):
-        logging_observer = LoggingObserver()
-        nt.assert_equal(logging_observer.updated, 0)
-        nt.assert_equal(len(logging_observer.messages), 0)
-
-        emitter = object()
-        message = os.urandom(10)
-        logging_observer.update(emitter, message)
-
-        nt.assert_equal(logging_observer.updated, 1)
-        nt.assert_equal(len(logging_observer.messages), 1)
-        nt.assert_equal(logging_observer.messages[0], (emitter, message))

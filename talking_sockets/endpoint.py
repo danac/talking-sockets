@@ -42,6 +42,9 @@ class SourceEndpoint(Observable):
     def process_data(self, data):
         assert_bytes(data)
 
+        if len(data) == 0:
+            return
+
         if self._delimiter is None:
             self.notify(data)
         else:
@@ -58,4 +61,6 @@ class SourceEndpoint(Observable):
 
 
 class SinkEndpoint(Observer):
-    pass
+
+    def __init__(self):
+        super().__init__()

@@ -21,15 +21,14 @@
 
 import os
 import nose.tools as nt
-from talking_sockets.observer import LoggingObserver
-from talking_sockets.endpoint import SourceEndpoint
+from unittest import mock
+from talking_sockets.endpoint import SourceEndpoint, SinkEndpoint
 
 
 class TestSourceEndpoint:
 
     def setUp(self):
         self.source = SourceEndpoint()
-        self.observer = LoggingObserver()
 
     def test_delimiter(self):
         nt.assert_equal(self.source.input_delimiter, None)
@@ -44,35 +43,40 @@ class TestSourceEndpoint:
         nt.assert_raises(AssertionError, self.source.set_input_delimiter, bytes())
 
     def test_process_data_no_delimiter(self):
-        self.source.add_observer(self.observer)
         nt.assert_equal(self.source.input_delimiter, None)
-        message = os.urandom(100)
-        self.source.process_data(message)
-        nt.assert_equal(len(self.observer.messages), 1)
-        nt.assert_equal(self.observer.messages[0], (self.source, message))
+        with mock.patch.object(self.source, 'notify') as patched_notify:
+            message = os.urandom(10)
+            self.source.process_data(message)
+            patched_notify.assert_called_once_with(message)
 
     def test_process_data_empty_message(self):
-        self.source.process_data(bytes())
+        with mock.patch.object(self.source, 'notify') as patched_notify:
+            self.source.process_data(bytes())
+            assert patched_notify.called is False
 
-    def _process_message(self, message, delimiter):
-        self.source.add_observer(self.observer)
-        message_parts = message.split(delimiter)
-        self.source.set_input_delimiter(delimiter)
-        nt.assert_equal(self.source.input_delimiter, delimiter)
-        self.source.process_data(message)
-        nt.assert_equal(len(self.observer.messages), 2)
-        nt.assert_equal(self.observer.messages[0], (self.source, message_parts[0]))
-        nt.assert_equal(self.observer.messages[1], (self.source, message_parts[1]))
-
-    def test_process_data_delimited_partial_chunk(self):
+    def test_process_data_delimited_one_packet_partial_chunk(self):
         message = b"part1|part2|half-part"
         delimiter = b"|"
-        self._process_message(message, delimiter)
+        expected_notifications = message.split(delimiter)[:2]
+        expected_calls = [mock.call(arg) for arg in expected_notifications]
+        with mock.patch.object(self.source, 'notify') as patched_notify:
+            self.source.set_input_delimiter(delimiter)
+            self.source.process_data(message)
+            nt.assert_equal(patched_notify.call_args_list, expected_calls)
 
-    def test_process_data_delimited_full_chunk(self):
-        message = b"part1|part2|"
+    def test_process_data_delimited_two_packets_full_chunk(self):
+        message1 = b"part1|part2|half-part"
+        message2 = b"-second-half-part|part4|"
         delimiter = b"|"
-        self._process_message(message, delimiter)
+        expected_notifications = [b"part1", b"part2", b"half-part-second-half-part", b"part4"]
+        expected_calls = [mock.call(arg) for arg in expected_notifications]
+        with mock.patch.object(self.source, 'notify') as patched_notify:
+            self.source.set_input_delimiter(delimiter)
+            self.source.process_data(message1)
+            nt.assert_equal(patched_notify.call_args_list, expected_calls[:2])
+            self.source.process_data(message2)
+            nt.assert_equal(patched_notify.call_args_list, expected_calls)
+
 
     def test_process_data_wrong_data_type(self):
         nt.assert_raises(AssertionError, self.source.process_data, None)

@@ -21,12 +21,9 @@
 
 import os
 import nose.tools as nt
+from unittest import mock
 from talking_sockets.router import Router
-from talking_sockets.observer import LoggingObserver, Observable
-
-
-class ObservableLogger(LoggingObserver, Observable):
-    pass
+from talking_sockets.observer import Observable
 
 
 class TestRouter:
@@ -37,48 +34,50 @@ class TestRouter:
 
     def setUp(self):
         self.router = Router()
-        self.sink_endpoint = LoggingObserver()
-        self.source_endpoint = Observable()
-        self.endpoint = ObservableLogger()
 
     @nt.raises(NotImplementedError)
     def test_add_observer(self):
-        self.router.add_observer(self.sink_endpoint)
+        self.router.add_observer(mock.sentinel.something)
 
     @nt.raises(NotImplementedError)
     def test_notify(self):
-        self.router.notify(bytes())
+        self.router.notify(mock.sentinel.something)
 
     def test_add_sink_endpoint(self):
-        self.router.add_sink_endpoint(self.sink_endpoint)
-        assert self.sink_endpoint in self.router.observers
+        with mock.patch.object(Observable, 'add_observer') as patched_add_observer:
+            self.router.add_sink_endpoint(mock.sentinel.sink_endpoint)
+            patched_add_observer.assert_called_once_with(mock.sentinel.sink_endpoint)
 
     def test_add_source_endpoint(self):
-        self.router.add_source_endpoint(self.source_endpoint)
-        assert self.router in self.source_endpoint.observers
+        source_endpoint = mock.Mock()
+        self.router.add_source_endpoint(source_endpoint)
+        source_endpoint.add_observer.assert_called_once_with(self.router)
 
     def test_add_endpoint(self):
-        self.router.add_endpoint(self.endpoint)
-        assert self.endpoint in self.router.observers
+        with mock.patch.object(Router, 'add_source_endpoint') as patched_add_source, \
+                mock.patch.object(Router, 'add_sink_endpoint') as patched_add_sink:
+            self.router.add_endpoint(mock.sentinel.endpoint)
+            patched_add_source.assert_called_once_with(mock.sentinel.endpoint)
+            patched_add_sink.assert_called_once_with(mock.sentinel.endpoint)
 
-    def test_update_source_to_sink(self):
-        self.router.add_sink_endpoint(self.sink_endpoint)
-        self.router.add_source_endpoint(self.source_endpoint)
+    def test_update_observer_updated(self):
+        observer1 = mock.Mock()
+        observer2 = mock.Mock()
+        self.router.observers.append(observer1)
+        self.router.observers.append(observer2)
 
-        nt.assert_equal(len(self.sink_endpoint.messages), 0)
-        self.source_endpoint.notify(self.message)
+        self.router.update(mock.sentinel.emitter, mock.sentinel.message)
 
-        nt.assert_equal(len(self.sink_endpoint.messages), 1)
-        nt.assert_equal(self.sink_endpoint.messages[0], (self.router, self.message))
+        observer1.update.assert_called_once_with(mock.sentinel.emitter, mock.sentinel.message)
+        observer2.update.assert_called_once_with(mock.sentinel.emitter, mock.sentinel.message)
 
-    def test_update_endpoint_to_sink(self):
-        self.router.add_endpoint(self.endpoint)
-        self.router.add_sink_endpoint(self.sink_endpoint)
+    def _test_update_observable_itself_not_updated(self):
+        observer1 = mock.Mock()
+        observer2 = mock.Mock()
+        self.router.observers.append(observer1)
+        self.router.observers.append(observer2)
 
-        nt.assert_equal(len(self.endpoint.messages), 0)
-        nt.assert_equal(len(self.sink_endpoint.messages), 0)
-        self.endpoint.notify(self.message)
+        self.router.update(observer1, mock.sentinel.message)
 
-        nt.assert_equal(len(self.endpoint.messages), 0)
-        nt.assert_equal(len(self.sink_endpoint.messages), 1)
-        nt.assert_equal(self.sink_endpoint.messages[0], (self.router, self.message))
+        assert observer1.update.called is False
+        observer2.update.assert_called_once_with(mock.sentinel.emitter, mock.sentinel.message)

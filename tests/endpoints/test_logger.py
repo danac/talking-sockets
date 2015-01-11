@@ -19,33 +19,26 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import abc
+from talking_sockets.endpoints.logger import Logger
+from unittest import mock
+import nose.tools as nt
 
 
-class Observer(metaclass=abc.ABCMeta):
+class TestLogger:
 
-    @abc.abstractmethod
-    def update(self, emitter, message):  # pragma: no cover
-        pass
+    def _udpate_n_times(self, n):
+        logging_observer = Logger()
+        nt.assert_equal(len(logging_observer.messages), 0)
 
+        for i in range(n-1):
+            emitter_attribute = getattr(mock.sentinel, 'emitter' + str(i))
+            message_attribute = getattr(mock.sentinel, 'message' + str(i))
 
-class Observable:
+            logging_observer.update(emitter_attribute, message_attribute)
 
-    def __init__(self):
-        self.observers = []
+            nt.assert_equal(len(logging_observer.messages), i+1)
+            nt.assert_equal(logging_observer.messages[i], (emitter_attribute, message_attribute))
 
-    def add_observer(self, observer):
-        assert issubclass(observer.__class__, Observer)
-        self.observers.append(observer)
-
-    def remove_observer(self, observer):
-        assert issubclass(observer.__class__, Observer),\
-            "Observer object doesn't implement the right interface."
-        try:
-            self.observers.remove(observer)
-        except ValueError:
-            raise AssertionError("Observer not registered.")
-
-    def notify(self, message):
-        for observer in self.observers:
-            observer.update(self, message)
+    def test_update_n_times(self):
+        for i in range(2):
+            yield self._udpate_n_times, i+1

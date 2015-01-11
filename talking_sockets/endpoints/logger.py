@@ -19,31 +19,16 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-from talking_sockets.observer import Observable, Observer
+from talking_sockets.endpoint import SinkEndpoint
 
 
-class Router(Observer, Observable):
+class Logger(SinkEndpoint):
 
     def __init__(self):
         super().__init__()
-
-    def add_observer(self, observer):
-        raise NotImplementedError("This method should not be called directly, use add_sink_endpoint(endpoint) instead.")
-
-    def add_sink_endpoint(self, endpoint):
-        super().add_observer(endpoint)
-
-    def add_source_endpoint(self, endpoint):
-        endpoint.add_observer(self)
-
-    def add_endpoint(self, endpoint):
-        self.add_sink_endpoint(endpoint)
-        self.add_source_endpoint(endpoint)
-
-    def notify(self, message):
-        raise NotImplementedError("This method should not be called from this class.")
+        self.messages = list()
 
     def update(self, emitter, message):
-        for observer in self.observers:
-            if observer is not emitter:
-                observer.update(emitter, message)
+        self.messages.append((emitter, message))
+
+
