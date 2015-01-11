@@ -31,7 +31,7 @@ class Observer(metaclass=abc.ABCMeta):
 
 class Observable:
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.observers = []
 
     def add_observer(self, observer):

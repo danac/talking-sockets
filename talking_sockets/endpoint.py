@@ -25,8 +25,8 @@ from talking_sockets.utils import assert_bytes
 
 class SourceEndpoint(Observable):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self._buffer = bytearray()
         self._delimiter = None
 
@@ -62,5 +62,5 @@ class SourceEndpoint(Observable):
 
 class SinkEndpoint(Observer):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
