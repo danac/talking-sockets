@@ -6,7 +6,6 @@ omit =
     */site-packages/coverage/*
     */site-packages/nose/*
     */site-packages/nose_cov.py
-    tests/*
     setup.py
 
 exclude_lines =

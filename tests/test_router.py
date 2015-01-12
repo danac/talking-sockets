@@ -71,7 +71,7 @@ class TestRouter:
         observer1.update.assert_called_once_with(mock.sentinel.emitter, mock.sentinel.message)
         observer2.update.assert_called_once_with(mock.sentinel.emitter, mock.sentinel.message)
 
-    def _test_update_observable_itself_not_updated(self):
+    def test_update_observable_itself_not_updated(self):
         observer1 = mock.Mock()
         observer2 = mock.Mock()
         self.router.observers.append(observer1)
@@ -80,4 +80,4 @@ class TestRouter:
         self.router.update(observer1, mock.sentinel.message)
 
         assert observer1.update.called is False
-        observer2.update.assert_called_once_with(mock.sentinel.emitter, mock.sentinel.message)
+        observer2.update.assert_called_once_with(observer1, mock.sentinel.message)

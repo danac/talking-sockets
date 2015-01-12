@@ -26,7 +26,7 @@ from talking_sockets.observer import Observable, Observer
 
 class DummyObserver(Observer):
 
-    def update(self, emitter, message):
+    def update(self, emitter, message):  # pragma: no cover
         pass
 
 
