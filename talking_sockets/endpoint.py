@@ -20,47 +20,12 @@
 #
 
 from talking_sockets.observer import Observable, Observer
-from talking_sockets.utils import assert_bytes
 
 
 class SourceEndpoint(Observable):
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self._buffer = bytearray()
-        self._delimiter = None
-
-    @property
-    def input_delimiter(self):
-        return self._delimiter
-
-    def set_input_delimiter(self, delimiter):
-        assert_bytes(delimiter)
-        assert delimiter != bytes(), "Delimiter cannot be empty"
-        self._delimiter = delimiter
-
-    def process_data(self, data):
-        assert_bytes(data)
-
-        if len(data) == 0:
-            return
-
-        if self._delimiter is None:
-            self.notify(data)
-        else:
-            self._buffer.extend(data)
-            chunks = self._buffer.split(self._delimiter)
-            if not self._buffer.endswith(self._delimiter):
-                self._buffer = chunks[-1]
-            else:
-                self._buffer.clear()
-
-            chunks.pop()
-            for chunk in chunks:
-                self.notify(chunk)
+    pass
 
 
 class SinkEndpoint(Observer):
+    pass
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)

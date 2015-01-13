@@ -20,6 +20,6 @@
 #
 
 
-def assert_bytes(data):
-    assert type(data) is bytes,\
-        "Wrong data type (expecting bytes, got {})".format(type(data))
+def assert_type(data, type_to_assert):
+    assert type(data) is type_to_assert,\
+        "Wrong data type (expecting {}, got {})".format(type_to_assert, type(data))
