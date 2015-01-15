@@ -23,10 +23,10 @@ import abc
 from talking_sockets.utils import assert_type
 
 
-class BufferedReader(metaclass=abc.ABCMeta):
+class ConnectionManager(metaclass=abc.ABCMeta):
 
     def __init__(self, **kwargs):
-        self._buffer = bytearray()
+        self._buffers = dict()
         self._delimiter = None
 
     @property
@@ -38,26 +38,38 @@ class BufferedReader(metaclass=abc.ABCMeta):
         assert delimiter != bytes(), "Delimiter cannot be empty"
         self._delimiter = delimiter
 
-    def process_data(self, data):
+    def process_data(self, origin, data):
         assert_type(data, bytes)
+
+        assert origin in self._buffers.keys(), "Origin not registered"
 
         if len(data) == 0:
             return
 
         if self._delimiter is None:
-            self.message_ready(data)
+            self.message_ready(origin, data)
         else:
-            self._buffer.extend(data)
-            chunks = self._buffer.split(self._delimiter)
-            if not self._buffer.endswith(self._delimiter):
-                self._buffer = chunks[-1]
+            self._buffers[origin].extend(data)
+            chunks = self._buffers[origin].split(self._delimiter)
+            if not self._buffers[origin].endswith(self._delimiter):
+                self._buffers[origin] = chunks[-1]
             else:
-                self._buffer.clear()
+                self._buffers[origin].clear()
 
             chunks.pop()
             for chunk in chunks:
-                self.message_ready(chunk)
+                self.message_ready(origin, chunk)
+
+    def register_connection(self, origin):
+        self._buffers[origin] = bytearray()
+
+    def unregister_connection(self, origin):
+        self._buffers.pop(origin)
+
+    @property
+    def connections(self):
+        return self._buffers.keys()
 
     @abc.abstractmethod
-    def message_ready(self, message):  # pragma: no cover
+    def message_ready(self, origin, message):  # pragma: no cover
         pass

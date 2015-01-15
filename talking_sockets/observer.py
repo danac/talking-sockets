@@ -49,3 +49,4 @@ class Observable:
     def notify(self, message):
         for observer in self.observers:
             observer.update(self, message)
+    

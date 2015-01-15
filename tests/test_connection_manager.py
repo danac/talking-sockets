@@ -22,10 +22,10 @@
 import os
 import nose.tools as nt
 from unittest import mock
-from talking_sockets.buffered_reader import BufferedReader
+from talking_sockets.connection_manager import ConnectionManager
 
 
-class DummyStreamReader(BufferedReader):
+class DummyReader(ConnectionManager):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -33,10 +33,10 @@ class DummyStreamReader(BufferedReader):
         pass
 
 
-class TestBufferedReader:
+class TestBufferedMultiReader:
 
     def setUp(self):
-        self.reader = DummyStreamReader()
+        self.reader = DummyReader()
 
     def test_delimiter(self):
         nt.assert_equal(self.reader.input_delimiter, None)
@@ -53,23 +53,26 @@ class TestBufferedReader:
     def test_process_data_no_delimiter(self):
         nt.assert_equal(self.reader.input_delimiter, None)
         with mock.patch.object(self.reader, 'message_ready') as patched_message_ready:
+            self.reader._buffers[mock.sentinel.origin] = bytearray()
             message = os.urandom(10)
-            self.reader.process_data(message)
-            patched_message_ready.assert_called_once_with(message)
+            self.reader.process_data(mock.sentinel.origin, message)
+            patched_message_ready.assert_called_once_with(mock.sentinel.origin, message)
 
     def test_process_data_empty_message(self):
         with mock.patch.object(self.reader, 'message_ready') as patched_message_ready:
-            self.reader.process_data(bytes())
+            self.reader._buffers[mock.sentinel.origin] = bytearray()
+            self.reader.process_data(mock.sentinel.origin, bytes())
             assert patched_message_ready.called is False
 
     def test_process_data_delimited_one_packet_partial_chunk(self):
         message = b"part1|part2|half-part"
         delimiter = b"|"
         expected_notifications = message.split(delimiter)[:2]
-        expected_calls = [mock.call(arg) for arg in expected_notifications]
+        expected_calls = [mock.call(mock.sentinel.origin, arg) for arg in expected_notifications]
         with mock.patch.object(self.reader, 'message_ready') as patched_message_ready:
+            self.reader._buffers[mock.sentinel.origin] = bytearray()
             self.reader.set_input_delimiter(delimiter)
-            self.reader.process_data(message)
+            self.reader.process_data(mock.sentinel.origin, message)
             nt.assert_equal(patched_message_ready.call_args_list, expected_calls)
 
     def test_process_data_delimited_two_packets_full_chunk(self):
@@ -77,16 +80,18 @@ class TestBufferedReader:
         message2 = b"-second-half-part|part4|"
         delimiter = b"|"
         expected_notifications = [b"part1", b"part2", b"half-part-second-half-part", b"part4"]
-        expected_calls = [mock.call(arg) for arg in expected_notifications]
+        expected_calls = [mock.call(mock.sentinel.origin, arg) for arg in expected_notifications]
         with mock.patch.object(self.reader, 'message_ready') as patched_message_ready:
+            self.reader._buffers[mock.sentinel.origin] = bytearray()
             self.reader.set_input_delimiter(delimiter)
-            self.reader.process_data(message1)
+            self.reader.process_data(mock.sentinel.origin, message1)
             nt.assert_equal(patched_message_ready.call_args_list, expected_calls[:2])
-            self.reader.process_data(message2)
+            self.reader.process_data(mock.sentinel.origin, message2)
             nt.assert_equal(patched_message_ready.call_args_list, expected_calls)
 
 
     def test_process_data_wrong_data_type(self):
-        nt.assert_raises(AssertionError, self.reader.process_data, None)
-        nt.assert_raises(AssertionError, self.reader.process_data, str())
-        nt.assert_raises(AssertionError, self.reader.process_data, int())
+        self.reader._buffers[mock.sentinel.origin] = bytearray()
+        nt.assert_raises(AssertionError, self.reader.process_data, mock.sentinel.origin, None)
+        nt.assert_raises(AssertionError, self.reader.process_data, mock.sentinel.origin, str())
+        nt.assert_raises(AssertionError, self.reader.process_data, mock.sentinel.origin, int())
